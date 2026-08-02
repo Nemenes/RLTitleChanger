@@ -1,0 +1,12 @@
+#pragma once
+#include "Components/Core.hpp"
+#include "Components/Console.hpp"
+#include "Components/Events.hpp"
+#include "Components/Instances.hpp"
+#include "Components/GameState.hpp"
+#include "Components/Manager.hpp"
+#include "Components/GUI.hpp"
+#include "Components/Main.hpp"
+#include "../json.hpp"
+//#include <curl/curl.h>
+using json = nlohmann::json;
