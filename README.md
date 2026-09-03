@@ -1,3 +1,5 @@
+Github does not allow me to upload Rocket League's UE dump at all
+
 ![Title Changer](https://raw.githubusercontent.com/Nemenes/RLTitleChanger/refs/heads/main/title%20changer.png)
 
 ![First Hook](https://raw.githubusercontent.com/Nemenes/RLTitleChanger/refs/heads/main/first%20hook.png)
