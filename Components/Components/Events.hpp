@@ -76,23 +76,6 @@ struct FCustomTitleData
     std::string fulltitle;
 };
 
-/*Predicted point in 3d space*/
-struct PredictedPoint
-{
-    /*Location of the predicted ball*/
-    FVector location;
-    /*States whether it as its highest point or bounces*/
-    bool isApex = false;
-    FVector apexLocation = { 0,0,0 };
-    FVector velocity;
-    FVector angVel;
-};
-
-struct LineColor
-{
-    unsigned char r, g, b, a; //rgba can be a value of 0-255
-};
-
 
 // Manages everything related to hooking functions form Process Event, as well as detouring.
 class EventsComponent : public Component
@@ -109,19 +92,27 @@ public:
 	~EventsComponent() override;
 
 public:
+    UGFxDataStore_X* dataStore = nullptr;
+    AGFxHUD_TA* hud = nullptr;
+    std::string playerid;
+    bool setcustomtitle = false;
+    bool RGBTitle = false;
+    bool resettitle = false;
+    float titlecolors[3] = { 1.0f, 0.0f, 0.0f };
+    float titleglowcolors[3] = { 1.0f, 0.0f, 0.0f };
+    std::string titlecolor;
+    std::string titleglowcolor;
+    std::string rainbowtitlecolor;
+    std::string rainbowtitleglowcolor;
+    std::string titletext = std::string(128, '\0');
+    std::string epicid = "";
+    char filterText[128] = "";
+    float selectedtitlecolor[3];
+    float selectedtitleglowcolor[3];
     int platform = 0;
-
-    bool shouldcreateparty = false;
-    bool shouldinvitehomie = false;
-    UOnlineSubsystem* subsy = nullptr;
-
-    //std::string trollingnetepicid;
-    std::string trollingsteamid;
-    FUniqueNetId trollingnetid;
-    UGFxData_PartyInvite_TA* party = nullptr;
-
-    URPCQueue_X* RPCQueue_X = nullptr;
-    ULocalPlayer* localplayer = nullptr;
+    bool dumptitles = false;
+    std::vector<STitleData> titlesforimgui;
+    STitleData selectedtitle;
 
 	void OnCreate() override;
 	void OnDestroy() override;

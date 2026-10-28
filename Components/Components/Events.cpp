@@ -119,14 +119,9 @@ namespace Hooks
 		}
 	}
 
-    bool b = false;
-    const int max_apex = 5;
-
 	void HUDPostRenderPost(const PostEvent& event)
 	{
 		Manager.OnTick(); 
-
-
 	}
 
 	void GameViewPortPostRender(PreEvent& event)
@@ -386,97 +381,406 @@ void EventsComponent::Initialize()
     //});
 
     HookEventPre("Function TAGame.MenuSequencer_TA.Tick", [&](PreEvent& event) {
-        
 
-        if (Events.shouldcreateparty == true) {
-            Console.Write("Debug 9");
-            Events.shouldcreateparty = false;
-            UOnlineGameParty_X* party = Instances.GetInstanceOf<UOnlineGameParty_X>();
-            if (party) {
-                Console.Write("Debug 10");
-                party->CreateParty(0, FScriptDelegate{});
-                //Main.SpawnNotification("[Party Manager]", "Party created", 10);
+        if (Events.resettitle == true) {
+            UGFxData_PlayerTitles_TA* playertitles = Instances.GetInstanceOf<UGFxData_PlayerTitles_TA>();
+            if (playertitles) {
+                playertitles->UpdatePlayerTitles();
+                Events.resettitle = false;
             }
         }
-        
-        if (Events.shouldinvitehomie == true) {
-            Events.shouldinvitehomie = false;
-            Console.Write("Debug 1");
 
+        if (setcustomtitle && RGBTitle) {
+            Manager.OnTick();
 
-            //Main.SpawnNotification("[Party Manager]", "Creating party...", 10);
-            UOnlineGameParty_X* party = Instances.GetInstanceOf<UOnlineGameParty_X>();
-            if (party) {
-                Console.Write("Debug 10");
-                party->CreateParty(0, FScriptDelegate{});
-                //Main.SpawnNotification("[Party Manager]", "Party created", 10);
+            std::string RTC = Colors::ColorToHex(GRainbowColor::GetByte());
+            std::string RTGC = Colors::ColorToHex(GRainbowColor::GetByte());
+
+            if (!RTC.empty() && RTC.front() == '#') {
+                RTC.erase(0, 1);
+            }
+            if (!RTGC.empty() && RTGC.front() == '#') {
+                RTGC.erase(0, 1);
             }
 
-
-            if (!Events.party)
-                Events.party = Instances.GetInstanceOf<UGFxData_PartyInvite_TA>();
-            Console.Write("Debug 2");
-            if (Events.party) {
-                Console.Write("Debug 3");
-                if (!Events.subsy)
-                    Events.subsy = Instances.GetInstanceOf<UOnlineSubsystem>();
-                Console.Write("Debug 4");
-                if (Events.subsy) {
-                    Console.Write("Debug 5");
-                    //Events.trollingnetid.EpicAccountId = Instances.to_fstring(Events.trollingnetepicid);
-
-                    std::stringstream container(Events.trollingsteamid);
-                    container >> Events.trollingnetid.Uid;
-
-                    //if (Events.trollingnetid.Uid != 0)
-                    Events.trollingnetid.Platform = 1;
-                    //else
-                    //Events.trollingnetid.Platform = 11;
-
-                    Events.trollingnetid.SplitscreenID = 0;
-
-                    Events.party->InviteToParty(Events.trollingnetid);
-
-                    URPC_PartySendInvite_X* invite = Instances.CreateInstance<URPC_PartySendInvite_X>();
-                    invite->SetPartyId(Events.party->OnlineGameParty->PartyID);
-                    invite->Invite(Events.trollingnetid);
-                    Instances.sendAPIRequest(invite);
-                    Console.Write("Debug 7");
-                    //Main.SpawnNotification("[Party Manager]", "Invite sent, success!", 10);
-
-                    if (!Events.localplayer)
-                    	Events.localplayer = Instances.GetInstanceOf<ULocalPlayer>();
-                    if (Events.localplayer)
-                    Events.party->OnlineGameParty->HandleLocalPlayerJoin(Events.localplayer);
-                    //Main.SpawnNotification("[Handler]", "Success!", 10);
-
-                    if (Events.trollingnetid.Platform == 1)
-                    if (Events.trollingnetid.Platform == 11)
-                        if (Events.trollingnetid.Platform == 1)
-                            Console.Success("[Party Manager] Invited " + std::to_string(Events.trollingnetid.Uid));
-                        if (Events.trollingnetid.Platform == 11)
-                            Console.Success("[Party Manager] Invited " + Events.trollingnetid.EpicAccountId.ToString());
-
-                        for (FPartyMember& partyMember : Events.party->OnlineGameParty->PartyMembers) {
-                        	partyMember.PrimaryMemberId = Events.trollingnetid;
-                        	partyMember.MemberId = Events.trollingnetid;
-                        }
-                        if (!Events.localplayer)
-                        	Events.localplayer = Instances.GetInstanceOf<ULocalPlayer>();
-                        if (Events.localplayer)
-                        Events.party->OnlineGameParty->HandleLocalPlayerJoin(Events.localplayer);
-                }
+            if (!RTC.empty() && !RTGC.empty()) {
+                rainbowtitlecolor = RTC;
+                rainbowtitleglowcolor = RTGC;
             }
             else {
-                //Events.shouldcreateparty = true;
-                //Main.SpawnNotification("[Party Manager]", "Creating party...", 10);
-                Console.Write("Debug 8");
+                Console.Error("no bueno");
             }
         }
+
+
+        if (setcustomtitle)
+        {
+            if (!dataStore)
+                dataStore = Instances.GetInstanceOf<UGFxDataStore_X>();
+
+            if (dataStore)
+            {
+                
+                wchar_t* p = new wchar_t[titletext.size() + 1];
+                for (std::string::size_type i = 0; i < titletext.size(); ++i)
+                    p[i] = titletext[i];
+
+                p[titletext.size()] = '\0';
+                FString fstitletext = FString(p);
+
+                FName t = FName(L"PlayerTitlesPlayerTitles");
+                FASValue count = dataStore->GetValue(L"PlayerTitles", NULL, L"SelectedTitle");
+                dataStore->SetStringValue(t, count.I, L"Text", fstitletext);
+                FASValue fasColor = dataStore->GetValue(t, count.I, L"Color");
+                fasColor.Type = 7;
+
+                if (RGBTitle) {
+                    fasColor.I = dataStore->FromHex(Format::ToFString(rainbowtitlecolor));
+                }else {
+                    fasColor.I = dataStore->FromHex(Format::ToFString(titlecolor));
+                }
+
+
+                FASValue fasGlowColor = dataStore->GetValue(t, count.I, L"GlowColor");
+                fasGlowColor.Type = 7;
+
+                if (RGBTitle) {
+                    fasGlowColor.I = dataStore->FromHex(Format::ToFString(rainbowtitleglowcolor));
+                }
+                else {
+                    fasGlowColor.I = dataStore->FromHex(Format::ToFString(titleglowcolor));
+                }
+
+
+                dataStore->SetASValue(t, count.I, L"Color", fasColor);
+                dataStore->SetASValue(t, count.I, L"GlowColor", fasGlowColor);
+
+                delete[] p;
+            }
+            wchar_t* p = new wchar_t[titletext.size() + 1];
+            for (std::string::size_type i = 0; i < titletext.size(); ++i)
+                p[i] = titletext[i];
+
+            p[titletext.size()] = '\0';
+            FString fstitletext = FString(p);
+
+            FName t = FName(L"PlayerTitlesPlayerTitles");
+            FASValue count = dataStore->GetValue(L"PlayerTitles", NULL, L"SelectedTitle");
+            dataStore->SetStringValue(t, count.I, L"Text", fstitletext);
+            FASValue fasColor = dataStore->GetValue(t, count.I, L"Color");
+            fasColor.Type = 7;
+            if (RGBTitle) {
+                fasColor.I = dataStore->FromHex(Format::ToFString(rainbowtitlecolor));
+            }
+            else {
+                fasColor.I = dataStore->FromHex(Format::ToFString(titlecolor));
+            }
+
+
+            FASValue fasGlowColor = dataStore->GetValue(t, count.I, L"GlowColor");
+            fasGlowColor.Type = 7;
+
+            if (RGBTitle) {
+                fasGlowColor.I = dataStore->FromHex(Format::ToFString(rainbowtitleglowcolor));
+            }
+            else {
+                fasGlowColor.I = dataStore->FromHex(Format::ToFString(titleglowcolor));
+            }
+            dataStore->SetASValue(t, count.I, L"Color", fasColor);
+            dataStore->SetASValue(t, count.I, L"GlowColor", fasGlowColor);
+
+            delete[] p;
+        }
+
+        if (Events.dumptitles) {
+            Events.dumptitles = false;
+            UPlayerTitleConfig_X* titleConfig = Instances.GetInstanceOf<UPlayerTitleConfig_X>();
+            if (titleConfig) {
+
+                json titledata = titleConfig->ToJson().ToString();
+                std::string path = "titles.json";
+
+                std::ofstream jsonFile(path);
+                if (jsonFile.is_open()) {
+                    jsonFile << titledata.dump(6);
+                    jsonFile.close();
+                    Console.Notify("Saved title data to " + path);
+                }
+                else {
+                    Console.Error("Could not open jsonFile");
+                }
+
+
+                //Console.Write(titleConfig->ToJson().ToString());
+                Console.Notify("Found " + std::to_string(titleConfig->Titles.Num()) + " titles!");
+
+            }
+        }
+
+        if (Events.titlesforimgui.size() == 0) {
+
+            UPlayerTitleConfig_X* titleConfig = Instances.GetInstanceOf<UPlayerTitleConfig_X>();
+
+            int autoTour = 0;
+            for (int i = 0; i < titleConfig->Titles.Num(); i++) {
+                std::string titleId = titleConfig->Titles[i].Id.ToString();
+                if (!titleId.find("AutoTour"))
+                    autoTour++;
+                if (autoTour == 1)
+                    titleId = titleId + "_1";
+                else if (autoTour == 2) {
+                    titleId = titleId + "_2";
+                    autoTour = 0;
+                }
+                Events.titlesforimgui.push_back({ titleId, titleConfig->Titles[i].Text.ToString(), Colors::ColorToHex(titleConfig->Titles[i].Color), Colors::ColorToHex(titleConfig->Titles[i].GlowColor), titleConfig->Titles[i].Color, titleConfig->Titles[i].GlowColor });
+            }
+        }
+
+        /*
+        if (!dataStore)
+            dataStore = Instances.GetInstanceOf<UGFxDataStore_X>();
+        if (dataStore) {
+            FCustomTitleData playertitle;
+            playertitle.titletext = "Nem!";
+            playertitle.titlecolor = "FFD700"; // Gold color
+            playertitle.titleglow = "FFFFFF"; // White glow
+
+            if (playertitle.titletext != "") {
+                    FName t = L"PlayerTitlesPlayerTitles";
+                    FASValue count = dataStore->GetValue(L"PlayerTitles", NULL, L"SelectedTitle");
+                    dataStore->SetStringValue(t, count.I, L"Text", Format::ToFString(playertitle.titletext));
+                    FASValue fasColor = dataStore->GetValue(t, count.I, L"Color");
+                    fasColor.Type = 7;
+                    fasColor.I = dataStore->FromHex(Format::ToFString(playertitle.titlecolor));
+                    FASValue fasGlowColor = dataStore->GetValue(t, count.I, L"GlowColor");
+                    fasGlowColor.Type = 7;
+                    fasGlowColor.I = dataStore->FromHex(Format::ToFString(playertitle.titleglow));
+                    dataStore->SetASValue(t, count.I, L"Color", fasColor);
+                    dataStore->SetASValue(t, count.I, L"GlowColor", fasGlowColor);
+                }
+            }*/
+        
 
     });
 
     HookEventPre("Function TAGame.GFxHUD_TA.Tick", [&](PreEvent& event) {
+
+        AGFxHUD_TA* hud = event.GetCaller<AGFxHUD_TA>();
+
+        if (setcustomtitle && RGBTitle) {
+            Manager.OnTick();
+
+            std::string RTC = Colors::ColorToHex(GRainbowColor::GetByte());
+            std::string RTGC = Colors::ColorToHex(GRainbowColor::GetByte());
+
+            if (!RTC.empty() && RTC.front() == '#') {
+                RTC.erase(0, 1);
+            }
+            if (!RTGC.empty() && RTGC.front() == '#') {
+                RTGC.erase(0, 1);
+            }
+
+            if (!RTC.empty() && !RTGC.empty()) {
+                rainbowtitlecolor = RTC;
+                rainbowtitleglowcolor = RTGC;
+            }
+            else {
+                Console.Error("no bueno");
+            }
+        }
+
+        for (UGFxData_PRI_TA* pri : hud->PRIData) {
+                Events.hud = hud;
+
+                    if (setcustomtitle == true) {
+
+                        wchar_t* p = new wchar_t[titletext.size() + 1];
+                        for (std::string::size_type i = 0; i < titletext.size(); ++i)
+                            p[i] = titletext[i];
+
+                        p[titletext.size()] = '\0';
+                        FString fstitletext = FString(p);
+
+                        FName t = L"PlayerInfo";
+                        dataStore->SetStringValue(t, pri->RowIndex, L"XPTitle", fstitletext);
+
+                        FASValue fasColor = dataStore->GetValue(t, pri->RowIndex, L"TitleColor");
+                        fasColor.Type = 7;
+                        if (RGBTitle) {
+                            fasColor.I = pri->FromHex(Format::ToFString(rainbowtitlecolor));
+                        }
+                        else {
+                            fasColor.I = pri->FromHex(Format::ToFString(titlecolor));
+                        }
+
+                        FASValue fasGlowColor = dataStore->GetValue(t, pri->RowIndex, L"TitleGlowColor");
+                        fasGlowColor.Type = 7;
+
+                        if (RGBTitle) {
+                            fasGlowColor.I = pri->FromHex(Format::ToFString(rainbowtitleglowcolor));
+                        }
+                        else {
+                            fasGlowColor.I = pri->FromHex(Format::ToFString(titleglowcolor));
+                        }
+
+                        dataStore->SetASValue(t, pri->RowIndex, L"TitleColor", fasColor);
+                        dataStore->SetASValue(t, pri->RowIndex, L"TitleGlowColor", fasGlowColor);
+
+                        delete[] p;
+
+                        if (setcustomtitle == false) {
+
+                            wchar_t* p = new wchar_t[titletext.size() + 1];
+                            for (std::string::size_type i = 0; i < titletext.size(); ++i)
+                                p[i] = titletext[i];
+
+                            p[titletext.size()] = '\0';
+                            FString fstitletext = FString(p);
+
+                            FName t = FName(L"PlayerTitlesPlayerTitles");
+                            FASValue count = dataStore->GetValue(L"PlayerTitles", NULL, L"SelectedTitle");
+                            dataStore->SetStringValue(t, count.I, L"Text", fstitletext);
+                            FASValue fasColor = dataStore->GetValue(t, count.I, L"Color");
+                            fasColor.Type = 7;
+                            if (RGBTitle) {
+                                fasColor.I = pri->FromHex(Format::ToFString(rainbowtitlecolor));
+                            }
+                            else {
+                                fasColor.I = pri->FromHex(Format::ToFString(titlecolor));
+                            }
+
+
+                            FASValue fasGlowColor = dataStore->GetValue(t, pri->RowIndex, L"TitleGlowColor");
+                            fasGlowColor.Type = 7;
+
+                            if (RGBTitle) {
+                                fasGlowColor.I = pri->FromHex(Format::ToFString(rainbowtitleglowcolor));
+                            }
+                            else {
+                                fasGlowColor.I = pri->FromHex(Format::ToFString(titleglowcolor));
+                            }
+                            dataStore->SetASValue(t, count.I, L"Color", fasColor);
+                            dataStore->SetASValue(t, count.I, L"GlowColor", fasGlowColor);
+
+                            delete[] p;
+                        }
+                    }
+                else {
+
+                    wchar_t* p = new wchar_t[titletext.size() + 1];
+                    for (std::string::size_type i = 0; i < titletext.size(); ++i)
+                        p[i] = titletext[i];
+
+                    p[titletext.size()] = '\0';
+                    FString fstitletext = FString(p);
+
+                    FName t = L"PlayerInfo";
+                    dataStore->SetStringValue(t, pri->RowIndex, L"XPTitle", fstitletext);
+                    FASValue fasColor = dataStore->GetValue(t, pri->RowIndex, L"TitleColor");
+                    fasColor.Type = 7;
+                    if (RGBTitle) {
+                        fasColor.I = pri->FromHex(Format::ToFString(rainbowtitlecolor));
+                    }
+                    else {
+                        fasColor.I = pri->FromHex(Format::ToFString(titlecolor));
+                    }
+
+
+                    FASValue fasGlowColor = dataStore->GetValue(t, pri->RowIndex, L"TitleGlowColor");
+                    fasGlowColor.Type = 7;
+
+                    if (RGBTitle) {
+                        fasGlowColor.I = pri->FromHex(Format::ToFString(rainbowtitleglowcolor));
+                    }
+                    else {
+                        fasGlowColor.I = pri->FromHex(Format::ToFString(titleglowcolor));
+                    }
+                    dataStore->SetASValue(t, pri->RowIndex, L"TitleColor", fasColor);
+                    dataStore->SetASValue(t, pri->RowIndex, L"TitleGlowColor", fasGlowColor);
+
+                    delete[] p;
+                }
+            }
+        
+
+        if (setcustomtitle)
+        {
+            if (hud && dataStore)
+            {
+                FUniqueNetId NetID = Instances.GetUniqueID();
+
+                UGFxData_PRI_TA* localplayerpri = hud->GetPRIDataFromID(NetID);
+
+                if (localplayerpri)
+                {
+                    wchar_t* p = new wchar_t[titletext.size() + 1];
+                    for (std::string::size_type i = 0; i < titletext.size(); ++i)
+                        p[i] = titletext[i];
+
+                    p[titletext.size()] = '\0';
+                    FString fstitletext = FString(p);
+
+                    FName t = L"PlayerInfo";
+                    dataStore->SetStringValue(t, localplayerpri->RowIndex, L"XPTitle", fstitletext);
+                    FASValue fasColor = dataStore->GetValue(t, localplayerpri->RowIndex, L"TitleColor");
+                    fasColor.Type = 7;
+                    if (RGBTitle) {
+                        fasColor.I = dataStore->FromHex(Format::ToFString(rainbowtitlecolor));
+                    }
+                    else {
+                        fasColor.I = dataStore->FromHex(Format::ToFString(titlecolor));
+                    }
+
+
+                    FASValue fasGlowColor = dataStore->GetValue(t, localplayerpri->RowIndex, L"GlowColor");
+                    fasGlowColor.Type = 7;
+
+                    if (RGBTitle) {
+                        fasGlowColor.I = dataStore->FromHex(Format::ToFString(rainbowtitleglowcolor));
+                    }
+                    else {
+                        fasGlowColor.I = dataStore->FromHex(Format::ToFString(titleglowcolor));
+                    }
+                    dataStore->SetASValue(t, localplayerpri->RowIndex, L"TitleColor", fasColor);
+                    dataStore->SetASValue(t, localplayerpri->RowIndex, L"TitleGlowColor", fasGlowColor);
+
+                    delete[] p;
+                }
+            }
+            wchar_t* p = new wchar_t[titletext.size() + 1];
+            for (std::string::size_type i = 0; i < titletext.size(); ++i)
+                p[i] = titletext[i];
+
+            p[titletext.size()] = '\0';
+            FString fstitletext = FString(p);
+
+            FName t = FName(L"PlayerTitlesPlayerTitles");
+            FASValue count = dataStore->GetValue(L"PlayerTitles", NULL, L"SelectedTitle");
+            dataStore->SetStringValue(t, count.I, L"Text", fstitletext);
+            FASValue fasColor = dataStore->GetValue(t, count.I, L"Color");
+            fasColor.Type = 7;
+            if (RGBTitle) {
+                fasColor.I = dataStore->FromHex(Format::ToFString(rainbowtitlecolor));
+            }
+            else {
+                fasColor.I = dataStore->FromHex(Format::ToFString(titlecolor));
+            }
+
+
+            FASValue fasGlowColor = dataStore->GetValue(t, count.I, L"GlowColor");
+            fasGlowColor.Type = 7;
+
+            if (RGBTitle) {
+                fasGlowColor.I = dataStore->FromHex(Format::ToFString(rainbowtitleglowcolor));
+            }
+            else {
+                fasGlowColor.I = dataStore->FromHex(Format::ToFString(titleglowcolor));
+            }
+            dataStore->SetASValue(t, count.I, L"Color", fasColor);
+            dataStore->SetASValue(t, count.I, L"GlowColor", fasGlowColor);
+
+            delete[] p;
+        }
 
 
 
